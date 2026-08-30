@@ -24,7 +24,7 @@ const adapter = {
     return {
       videos: data.videos,
       note: `${checked}Checking every ${mins} min.` +
-        (data.youtubeApiKey ? '' : ' No YOUTUBE_API_KEY set — using the public page fallback.'),
+        (data.youtubeApiKey ? '' : ' Reading counts from the public page — no API key needed.'),
     };
   },
 

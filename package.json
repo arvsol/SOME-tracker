@@ -12,6 +12,8 @@
     "seed": "node --no-warnings=ExperimentalWarning seed.js",
     "build:site": "node scripts/build-site.js",
     "preview:site": "node scripts/build-site.js --local && cd _site && python3 -m http.server 4111",
-    "poll": "node --no-warnings=ExperimentalWarning scripts/poll.js"
+    "poll": "node --no-warnings=ExperimentalWarning scripts/poll.js",
+    "test": "node --test test/*.test.js",
+    "check": "node scripts/check-source.js"
   }
 }

@@ -29,11 +29,7 @@ async function main() {
   }
 
   if (!providers.hasApiKey()) {
-    console.warn(
-      'WARNING: no YOUTUBE_API_KEY secret set. Falling back to scraping the\n' +
-      '         watch page, which GitHub runners are often served a consent\n' +
-      '         page for. Set the secret for reliable numbers.',
-    );
+    console.log('No API key set — reading counts from the public page.\n');
   }
 
   const now = Math.floor(Date.now() / 1000);
@@ -45,6 +41,7 @@ async function main() {
 
   let recorded = 0;
   let failed = 0;
+  const sources = new Set();
 
   for (const video of videos) {
     const result = results.get(video.id);
@@ -70,9 +67,11 @@ async function main() {
     if (typeof stats.views === 'number' && Number.isFinite(stats.views)) {
       entry.t.push(now - entry.t0);
       entry.v.push(Math.round(stats.views));
+      entry.source = stats.source ?? null;
       compact(entry, now);
       recorded++;
-      console.log(`  ${entry.title || video.id}: ${stats.views.toLocaleString()} views`);
+      sources.add(stats.source ?? 'unknown');
+      console.log(`  ${entry.title || video.id}: ${stats.views.toLocaleString()} views (${stats.source})`);
     }
   }
 
@@ -87,7 +86,8 @@ async function main() {
 
   history.updatedAt = new Date().toISOString();
   fs.writeFileSync(HISTORY_FILE, `${JSON.stringify(history, null, 1)}\n`);
-  console.log(`\n${recorded} recorded, ${failed} failed.`);
+  console.log(`\n${recorded} recorded, ${failed} failed` +
+    (sources.size ? ` (via ${[...sources].join(', ')}).` : '.'));
 
   // A failure for every single video means something systemic (a bad key, an
   // expired quota) rather than one dead link, and should fail the run so the

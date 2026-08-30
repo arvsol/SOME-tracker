@@ -153,6 +153,7 @@ const adapter = {
     });
 
     videos.sort((a, b) => rank(b) - rank(a));
+    const failures = videos.filter((v) => v.lastError);
 
     const checked = history.updatedAt
       ? `Last reading ${Dashboard.ago(Date.parse(history.updatedAt))}.`
@@ -160,7 +161,8 @@ const adapter = {
     return {
       videos,
       note: `${checked} A scheduled GitHub Action takes one every 15 minutes.` +
-        (token.has() ? '' : ' Read-only — connect a token to add videos.'),
+        (token.has() ? '' : ' Read-only — connect a token to add videos.') +
+        (failures.length ? ` ${failures.length} video(s) could not be read — open one for details.` : ''),
     };
   },
 

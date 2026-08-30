@@ -52,25 +52,53 @@ running total — the peaks are the moments people were actually watching, and t
 dips are the quiet stretches. Switch between 24 hours, 7 days, 30 days and all
 time, and hover for exact numbers.
 
-## Getting reliable YouTube numbers
+## Reading YouTube without an API key
 
-Without configuration the app reads the public YouTube watch page. That works,
-but it is best-effort and breaks whenever YouTube changes its markup.
+No key is needed. The tracker tries three routes in order and uses the first
+that answers:
 
-For dependable data, use an API key — free, and one key covers thousands of
-checks a day:
+1. **The public watch page.** One request, and the count is usually right
+   there in the page.
+2. **YouTube's own player endpoint.** If the page renders without a count, the
+   tracker reads the public client key *out of the page it just fetched* and
+   calls the same endpoint youtube.com's player calls. Nothing is hardcoded,
+   so a rotation on YouTube's side fixes itself rather than breaking polling.
+3. **A Piped instance**, if you set `PIPED_API`. Off by default.
 
-1. Create a project at [console.cloud.google.com](https://console.cloud.google.com/).
-2. Enable **YouTube Data API v3**.
-3. Make an API key under *Credentials*.
+Requests carry consent cookies and a pinned region, which is what stops
+YouTube answering with the EU consent page instead of the video.
+
+**Check whether it works from a given machine before relying on it:**
 
 ```bash
-YOUTUBE_API_KEY=your-key-here npm start
+npm run check                  # a known-good video
+npm run check -- <video-url>   # a specific one
 ```
 
-With a key set, all tracked videos are fetched in a single batched request.
+It reports which route answered, or why none did.
 
-Vimeo works with no key at all.
+### If the no-key route gets blocked
+
+YouTube treats datacenter addresses more suspiciously than home ones, so a CI
+runner or a VPS may get a consent page or a bot check where your laptop does
+not. The tracker names which of those happened instead of reporting a bare
+failure, and the polling workflow runs the same diagnostic automatically when
+a run fails.
+
+Three ways out, cheapest first:
+
+- **Run the poller somewhere else.** The same `scripts/poll.js` — or the whole
+  Node app — works from your own machine or a small box at home.
+- **Set `PIPED_API`** to a working [Piped](https://github.com/TeamPiped/Piped)
+  instance: as a repository *variable* for the Action (Settings → Secrets and
+  variables → Actions → Variables), or an environment variable locally. Public
+  instances come and go, so treat it as a fallback, not a foundation.
+- **Set `YOUTUBE_API_KEY`.** Still the most reliable option if you can get one
+  ([console.cloud.google.com](https://console.cloud.google.com/) → enable
+  *YouTube Data API v3* → create an API key). It is free, and with it every
+  tracked video is fetched in a single batched request.
+
+Vimeo needs no key and no fallbacks.
 
 ## How history is collected
 
@@ -113,13 +141,9 @@ so this costs nothing to run.
 
 1. **Settings → Pages → Source: GitHub Actions.** (Only you can do this — it
    cannot be enabled from a workflow.)
-2. **Settings → Secrets and variables → Actions → New repository secret**,
-   named `YOUTUBE_API_KEY`. This one is not optional here: GitHub's runners
-   are usually served a consent page instead of the video, so the scraping
-   fallback does not work from CI.
-3. Push to `main`. The dashboard deploys to
+2. Push to `main`. The dashboard deploys to
    `https://<you>.github.io/<repo>/`, and the poller starts on its schedule.
-4. Open the dashboard, click **Connect**, and paste a
+3. Open the dashboard, click **Connect**, and paste a
    [fine-grained token](https://github.com/settings/personal-access-tokens/new)
    scoped to this repository with **Contents: read and write** (add
    **Actions: read and write** to have new videos read immediately rather than
@@ -145,6 +169,9 @@ npm run preview:site      # http://localhost:4111
 - **A public repo is a public tracker.** The list of videos you track and their
   full view history are readable by anyone. The token is not — it stays in your
   browser's local storage and is never committed.
+- **No API key is needed**, but the no-key route reads a public page that a CI
+  address can be blocked from — see the section above, and run `npm run check`
+  before relying on it. The workflow diagnoses this for you when a run fails.
 - **Scheduled runs are best-effort.** GitHub delays them under load and
   sometimes skips them, so readings land unevenly. The analysis interpolates
   between readings rather than assuming a fixed spacing, so curves stay
@@ -203,7 +230,8 @@ stays open so container health checks keep working.
 | Variable | Default | |
 |---|---|---|
 | `PORT` | `3000` | Port to serve on. |
-| `YOUTUBE_API_KEY` | *(none)* | Recommended. Falls back to page scraping. |
+| `YOUTUBE_API_KEY` | *(none)* | Optional. Most reliable, and enables batching. |
+| `PIPED_API` | *(none)* | Optional fallback when the public page is blocked. |
 | `POLL_INTERVAL_MINUTES` | `15` | How often to take a reading. |
 | `DB_PATH` | `data/tracker.db` | Where history is stored. |
 | `APP_PASSWORD` | *(none)* | Require a password. Set this if it is reachable from the internet. |
@@ -240,6 +268,8 @@ public/            the dashboard (no build step, no framework)
 site/              the static dashboard (GitHub Pages build)
 scripts/poll.js    the poller that runs as a GitHub Action
 scripts/build-site.js  assembles site/ + lib/ into _site/
+scripts/check-source.js  can this machine read view counts?
+test/              node --test suite
 data/*.json        tracked list and readings (the GitHub build's database)
 Dockerfile         container image
 docker-compose.yml self-hosting on your own box

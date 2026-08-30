@@ -248,7 +248,7 @@ if (require.main === module) {
   server.listen(PORT, HOST, () => {
     console.log(`\n  SOME tracker running at http://localhost:${PORT}`);
     console.log(`  Checking every ${poller.intervalMinutes} min` +
-      (providers.hasApiKey() ? ' (YouTube API key set)' : ' (no YOUTUBE_API_KEY — using page fallback)'));
+      (providers.hasApiKey() ? ' (using the YouTube API key)' : ' (no API key — reading the public page)'));
     console.log(`  Database: ${db.DB_PATH}`);
     console.log(`  Password: ${APP_PASSWORD ? 'required' : 'not set (open access)'}\n`);
     poller.start();
