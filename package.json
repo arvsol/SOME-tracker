@@ -1,0 +1,12 @@
+{
+  "name": "some-tracker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Paste a video link, watch its views and virality at a glance.",
+  "type": "commonjs",
+  "engines": { "node": ">=22.5.0" },
+  "scripts": {
+    "start": "node --no-warnings=ExperimentalWarning server.js",
+    "seed": "node --no-warnings=ExperimentalWarning seed.js"
+  }
+}

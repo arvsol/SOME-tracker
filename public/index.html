@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SOME tracker</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>📈</text></svg>">
+</head>
+<body>
+  <header class="masthead">
+    <div class="brand">
+      <span class="brand-mark">📈</span>
+      <div>
+        <h1>SOME tracker</h1>
+        <p class="brand-sub">Paste a video link. Watch it climb.</p>
+      </div>
+    </div>
+
+    <form id="add-form" class="paste" autocomplete="off">
+      <input
+        id="link-input"
+        class="paste-input"
+        type="text"
+        name="url"
+        placeholder="Paste a YouTube or Vimeo link…"
+        aria-label="Video link"
+        spellcheck="false">
+      <button id="add-button" class="paste-button" type="submit">Track it</button>
+    </form>
+    <p id="form-message" class="form-message" role="status" aria-live="polite"></p>
+  </header>
+
+  <main>
+    <div id="summary" class="summary" hidden></div>
+    <div id="board" class="board"></div>
+    <div id="empty" class="empty" hidden>
+      <p class="empty-title">Nothing tracked yet</p>
+      <p>Paste a video link above and it lands here. Numbers refresh on their own —
+         leave it open and the curve fills in.</p>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <span id="poll-note"></span>
+    <button id="refresh" class="ghost-button" type="button">Refresh now</button>
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>
