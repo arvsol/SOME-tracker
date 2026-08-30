@@ -1,0 +1,25 @@
+# Render blueprint. Point a new Blueprint at this repo and it reads this file.
+#
+# Note the plan: Render's free instances sleep after inactivity, which stops
+# the background poller and leaves gaps in the curves. A paid instance is
+# what keeps readings continuous.
+services:
+  - type: web
+    name: some-tracker
+    runtime: docker
+    plan: starter
+    healthCheckPath: /api/health
+
+    disk:
+      name: tracker-data
+      mountPath: /data
+      sizeGB: 1
+
+    envVars:
+      - key: DB_PATH
+        value: /data/tracker.db
+      # Set these in the Render dashboard rather than committing them.
+      - key: YOUTUBE_API_KEY
+        sync: false
+      - key: APP_PASSWORD
+        sync: false

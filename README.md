@@ -83,6 +83,67 @@ anything about momentum.
 Readings are stored in SQLite at `data/tracker.db`. Nothing leaves your machine
 except the requests to YouTube and Vimeo.
 
+## Deploying it
+
+The app needs two things from a host, and they rule out most of the obvious
+choices:
+
+- **An always-on process.** History exists only because the poller keeps taking
+  readings. Serverless platforms (Vercel, Netlify, Cloudflare Workers) only run
+  code while a request is in flight, so the poller would never run and the
+  dashboard would stay empty.
+- **A persistent disk.** The curves live in SQLite. On a platform with an
+  ephemeral filesystem, every deploy silently starts them over.
+
+The same trap exists on hosts that *do* fit: free tiers that sleep after
+inactivity, and Fly's `auto_stop_machines`, both stop the poller and leave gaps
+in the curves. Keep the instance awake.
+
+Everything below assumes Docker. There are no dependencies to install, so the
+image is small and the build is a copy.
+
+### A VPS, home server or Raspberry Pi
+
+The cheapest option, and the app is small enough for the smallest box.
+
+```bash
+YOUTUBE_API_KEY=your-key APP_PASSWORD=something-secret docker compose up -d
+```
+
+Then put it behind Caddy, nginx or a Tailscale/Cloudflare tunnel for HTTPS.
+
+### Fly.io
+
+```bash
+fly launch --no-deploy               # sets app name and region in fly.toml
+fly volumes create tracker_data --size 1
+fly secrets set YOUTUBE_API_KEY=your-key APP_PASSWORD=something-secret
+fly deploy
+```
+
+`fly.toml` already pins the machine awake, which is what keeps readings
+continuous.
+
+### Render
+
+Point a new Blueprint at this repo — `render.yaml` describes the service, its
+disk and its health check. Set `YOUTUBE_API_KEY` and `APP_PASSWORD` in the
+dashboard. Use a paid instance: free ones sleep, and a sleeping tracker is not
+tracking.
+
+### Locking it down
+
+Anything reachable from the internet should set `APP_PASSWORD`. Without it the
+dashboard is open to anyone who finds the URL — they can add and delete videos
+and burn through your API quota.
+
+```bash
+APP_PASSWORD=something-secret npm start
+```
+
+The browser then asks for a password (leave the username blank). `/api/health`
+stays open so container health checks keep working.
+
 ## Configuration
 
 | Variable | Default | |
@@ -91,6 +152,8 @@ except the requests to YouTube and Vimeo.
 | `YOUTUBE_API_KEY` | *(none)* | Recommended. Falls back to page scraping. |
 | `POLL_INTERVAL_MINUTES` | `15` | How often to take a reading. |
 | `DB_PATH` | `data/tracker.db` | Where history is stored. |
+| `APP_PASSWORD` | *(none)* | Require a password. Set this if it is reachable from the internet. |
+| `HOST` | `0.0.0.0` | Interface to bind. |
 
 ## Supported links
 
@@ -118,4 +181,8 @@ lib/providers.js   link parsing and stat fetching
 lib/metrics.js     velocity, momentum and the viral verdict
 lib/poller.js      the background reading loop
 public/            the dashboard (no build step, no framework)
+Dockerfile         container image
+docker-compose.yml self-hosting on your own box
+fly.toml           Fly.io config
+render.yaml        Render blueprint
 ```

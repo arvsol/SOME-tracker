@@ -3,6 +3,7 @@
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
+const crypto = require('node:crypto');
 
 const db = require('./lib/db');
 const providers = require('./lib/providers');
@@ -10,7 +11,12 @@ const metrics = require('./lib/metrics');
 const poller = require('./lib/poller');
 
 const PORT = Number(process.env.PORT || 3000);
+const HOST = process.env.HOST || '0.0.0.0';
 const PUBLIC_DIR = path.join(__dirname, 'public');
+
+// Optional shared password, for when this is reachable from the internet.
+// Unset (the default) leaves the app open, which is what you want locally.
+const APP_PASSWORD = process.env.APP_PASSWORD || '';
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -31,6 +37,16 @@ const routes = [
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+
+  // /api/health stays open so container health checks work without credentials.
+  if (url.pathname !== '/api/health' && !authorized(req)) {
+    res.writeHead(401, {
+      'www-authenticate': 'Basic realm="SOME tracker", charset="UTF-8"',
+      'content-type': 'text/plain',
+    }).end('Authentication required.');
+    return;
+  }
+
   const route = routes.find(([method, pattern]) =>
     method === req.method && pattern.test(url.pathname));
 
@@ -49,6 +65,21 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'GET' || req.method === 'HEAD') return serveStatic(url, res);
   json(res, 405, { error: 'Method not allowed' });
 });
+
+function authorized(req) {
+  if (!APP_PASSWORD) return true;
+  const [scheme, encoded] = String(req.headers.authorization || '').split(' ');
+  if (scheme !== 'Basic' || !encoded) return false;
+  const decoded = Buffer.from(encoded, 'base64').toString('utf8');
+  return sameSecret(decoded.slice(decoded.indexOf(':') + 1), APP_PASSWORD);
+}
+
+// Hash both sides first: timingSafeEqual needs equal lengths, and comparing the
+// digests keeps the password's length from leaking through the comparison.
+function sameSecret(a, b) {
+  const digest = (value) => crypto.createHash('sha256').update(String(value)).digest();
+  return crypto.timingSafeEqual(digest(a), digest(b));
+}
 
 function health(req, res) {
   json(res, 200, {
@@ -210,13 +241,31 @@ if (require.main === module) {
     throw err;
   });
 
-  server.listen(PORT, () => {
+  server.listen(PORT, HOST, () => {
     console.log(`\n  SOME tracker running at http://localhost:${PORT}`);
     console.log(`  Checking every ${poller.intervalMinutes} min` +
       (providers.hasApiKey() ? ' (YouTube API key set)' : ' (no YOUTUBE_API_KEY — using page fallback)'));
-    console.log(`  Database: ${db.DB_PATH}\n`);
+    console.log(`  Database: ${db.DB_PATH}`);
+    console.log(`  Password: ${APP_PASSWORD ? 'required' : 'not set (open access)'}\n`);
     poller.start();
   });
+
+  // Containers stop with SIGTERM. Close the database so SQLite's write-ahead
+  // log is checkpointed instead of left behind for the next boot to recover.
+  let shuttingDown = false;
+  for (const signal of ['SIGTERM', 'SIGINT']) {
+    process.on(signal, () => {
+      if (shuttingDown) return;
+      shuttingDown = true;
+      console.log('\n  Shutting down…');
+      poller.stop();
+      server.close(() => {
+        try { db.db.close(); } catch { /* already closed */ }
+        process.exit(0);
+      });
+      setTimeout(() => process.exit(0), 5000).unref();
+    });
+  }
 }
 
 module.exports = server;
