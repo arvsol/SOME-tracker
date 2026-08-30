@@ -139,11 +139,11 @@ so this costs nothing to run.
 
 **Setup, once:**
 
-1. **Settings → Pages → Source: GitHub Actions.** (Only you can do this — it
-   cannot be enabled from a workflow.)
-2. Push to `main`. The dashboard deploys to
+1. Push to `main`. The deploy workflow turns Pages on for you the first time
+   it runs — it asks for `pages: write` and passes `enablement: true`, so
+   there is no settings page to visit. The dashboard deploys to
    `https://<you>.github.io/<repo>/`, and the poller starts on its schedule.
-3. Open the dashboard, click **Connect**, and paste a
+2. Open the dashboard, click **Connect**, and paste a
    [fine-grained token](https://github.com/settings/personal-access-tokens/new)
    scoped to this repository with **Contents: read and write** (add
    **Actions: read and write** to have new videos read immediately rather than
