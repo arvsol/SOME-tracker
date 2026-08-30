@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SOME tracker</title>
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./styles-extra.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>📈</text></svg>">
+</head>
+<body>
+  <header class="masthead">
+    <div class="brand">
+      <span class="brand-mark">📈</span>
+      <div>
+        <h1>SOME tracker</h1>
+        <p class="brand-sub">Paste a video link. Watch it climb.</p>
+      </div>
+      <button id="connect" class="connect-button" type="button">Connect</button>
+    </div>
+
+    <div id="connect-panel" class="connect-panel" hidden>
+      <div id="token-help">
+        <p class="panel-title">Connect a GitHub token to add videos</p>
+        <p>
+          The dashboard is a static page, so adding a video is a commit to
+          <a id="repo-link" target="_blank" rel="noopener noreferrer">your repo</a>.
+          The token is stored in this browser only — it is never committed and
+          never leaves your machine except to call GitHub.
+        </p>
+        <ol>
+          <li><a id="token-link" target="_blank" rel="noopener noreferrer">Create a fine-grained token</a></li>
+          <li>Repository access: <b>only this repository</b></li>
+          <li>Permissions: <b>Contents: read and write</b>, and <b>Actions: read and write</b>
+              if you want new videos read immediately instead of at the next quarter hour</li>
+        </ol>
+      </div>
+      <p id="token-connected" class="panel-title" hidden>Connected. This browser can add and remove videos.</p>
+      <div class="panel-row">
+        <input id="token-input" class="token-input" type="password"
+               placeholder="github_pat_…" autocomplete="off" spellcheck="false">
+        <button id="token-save" class="paste-button" type="button">Save</button>
+        <button id="token-clear" class="ghost-button" type="button" hidden>Disconnect</button>
+      </div>
+    </div>
+
+    <form id="add-form" class="paste" autocomplete="off">
+      <input
+        id="link-input"
+        class="paste-input"
+        type="text"
+        name="url"
+        placeholder="Paste a YouTube or Vimeo link…"
+        aria-label="Video link"
+        spellcheck="false">
+      <button id="add-button" class="paste-button" type="submit">Track it</button>
+    </form>
+    <p id="form-message" class="form-message" role="status" aria-live="polite"></p>
+  </header>
+
+  <main>
+    <div id="summary" class="summary" hidden></div>
+    <div id="board" class="board"></div>
+    <div id="empty" class="empty" hidden>
+      <p class="empty-title">Nothing tracked yet</p>
+      <p>Paste a video link above and it lands here. A scheduled GitHub Action
+         takes a reading every 15 minutes — leave it alone and the curve fills in.</p>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <span id="poll-note"></span>
+  </footer>
+
+  <script src="./config.js"></script>
+  <script src="./metrics.js"></script>
+  <script src="./parse-link.js"></script>
+  <script src="./dashboard.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

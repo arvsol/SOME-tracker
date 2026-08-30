@@ -4,9 +4,14 @@
   "private": true,
   "description": "Paste a video link, watch its views and virality at a glance.",
   "type": "commonjs",
-  "engines": { "node": ">=22.5.0" },
+  "engines": {
+    "node": ">=22.5.0"
+  },
   "scripts": {
     "start": "node --no-warnings=ExperimentalWarning server.js",
-    "seed": "node --no-warnings=ExperimentalWarning seed.js"
+    "seed": "node --no-warnings=ExperimentalWarning seed.js",
+    "build:site": "node scripts/build-site.js",
+    "preview:site": "node scripts/build-site.js --local && cd _site && python3 -m http.server 4111",
+    "poll": "node --no-warnings=ExperimentalWarning scripts/poll.js"
   }
 }

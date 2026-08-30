@@ -18,6 +18,9 @@ const PUBLIC_DIR = path.join(__dirname, 'public');
 // Unset (the default) leaves the app open, which is what you want locally.
 const APP_PASSWORD = process.env.APP_PASSWORD || '';
 
+// The dashboard module lives in lib/ because the static build shares it.
+const SHARED_FILES = { '/dashboard.js': path.join(__dirname, 'lib', 'dashboard.js') };
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -183,9 +186,10 @@ function shape(video) {
 
 function serveStatic(url, res) {
   const requested = url.pathname === '/' ? '/index.html' : url.pathname;
-  const filePath = path.join(PUBLIC_DIR, path.normalize(requested));
+  const shared = SHARED_FILES[requested];
+  const filePath = shared || path.join(PUBLIC_DIR, path.normalize(requested));
 
-  if (!filePath.startsWith(PUBLIC_DIR)) {
+  if (!shared && !filePath.startsWith(PUBLIC_DIR)) {
     res.writeHead(403).end('Forbidden');
     return;
   }

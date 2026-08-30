@@ -102,6 +102,60 @@ in the curves. Keep the instance awake.
 Everything below assumes Docker. There are no dependencies to install, so the
 image is small and the build is a copy.
 
+### GitHub Pages + Actions (no server, free)
+
+This is the one option that needs no host at all: a scheduled Action takes the
+readings and commits them, the repo *is* the database, and Pages serves the
+dashboard. On a public repository [Actions on standard runners is free](https://docs.github.com/en/billing/reference/actions-runner-pricing),
+so this costs nothing to run.
+
+**Setup, once:**
+
+1. **Settings → Pages → Source: GitHub Actions.** (Only you can do this — it
+   cannot be enabled from a workflow.)
+2. **Settings → Secrets and variables → Actions → New repository secret**,
+   named `YOUTUBE_API_KEY`. This one is not optional here: GitHub's runners
+   are usually served a consent page instead of the video, so the scraping
+   fallback does not work from CI.
+3. Push to `main`. The dashboard deploys to
+   `https://<you>.github.io/<repo>/`, and the poller starts on its schedule.
+4. Open the dashboard, click **Connect**, and paste a
+   [fine-grained token](https://github.com/settings/personal-access-tokens/new)
+   scoped to this repository with **Contents: read and write** (add
+   **Actions: read and write** to have new videos read immediately rather than
+   at the next quarter hour).
+
+After that it behaves like the server version: paste a link, get a card.
+
+**How it works.** Adding a video commits to `data/videos.json` from your
+browser. The scheduled workflow reads that list, fetches the counts and appends
+to `data/history.json`. The dashboard fetches both files and runs the *same*
+`lib/metrics.js` in your browser that the Node app runs on the server — one
+copy of the analysis, wrapped for the browser at build time by
+`scripts/build-site.js`.
+
+Preview it locally before pushing:
+
+```bash
+npm run preview:site      # http://localhost:4111
+```
+
+**What to know before choosing this:**
+
+- **A public repo is a public tracker.** The list of videos you track and their
+  full view history are readable by anyone. The token is not — it stays in your
+  browser's local storage and is never committed.
+- **Scheduled runs are best-effort.** GitHub delays them under load and
+  sometimes skips them, so readings land unevenly. The analysis interpolates
+  between readings rather than assuming a fixed spacing, so curves stay
+  correct — just sampled a little raggedly.
+- **On a private repo**, the [2,000 free minutes/month](https://docs.github.com/billing/managing-billing-for-github-actions/about-billing-for-github-actions)
+  cap this: each run bills as a whole minute, so 15-minute polling costs ~2,880
+  minutes. Change the cron in `.github/workflows/poll.yml` to `0,30 * * * *`
+  to fit.
+- **History is pruned** to keep the repo small: every reading for 14 days, then
+  one per 6 hours. A tracked video settles at roughly 20 KB.
+
 ### A VPS, home server or Raspberry Pi
 
 The cheapest option, and the app is small enough for the smallest box.
@@ -178,9 +232,15 @@ server.js          HTTP server and JSON API
 seed.js            demo data
 lib/db.js          SQLite schema and queries
 lib/providers.js   link parsing and stat fetching
-lib/metrics.js     velocity, momentum and the viral verdict
+lib/metrics.js     velocity, momentum and the viral verdict (shared)
+lib/dashboard.js   the dashboard UI, shared by both frontends
+lib/parse-link.js  URL parsing, shared by both frontends
 lib/poller.js      the background reading loop
 public/            the dashboard (no build step, no framework)
+site/              the static dashboard (GitHub Pages build)
+scripts/poll.js    the poller that runs as a GitHub Action
+scripts/build-site.js  assembles site/ + lib/ into _site/
+data/*.json        tracked list and readings (the GitHub build's database)
 Dockerfile         container image
 docker-compose.yml self-hosting on your own box
 fly.toml           Fly.io config
