@@ -1,0 +1,69 @@
+name: Record view counts
+
+# The poller. Neither YouTube nor Vimeo will tell you a video's history, so
+# this builds it a reading at a time and commits each one to the repo.
+on:
+  schedule:
+    # Every 15 minutes. GitHub runs scheduled jobs on a best-effort basis, so
+    # readings can land late — the analysis interpolates between them rather
+    # than assuming a fixed interval.
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Never let two runs commit at once.
+concurrency:
+  group: record-view-counts
+  cancel-in-progress: false
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Take a reading
+        id: poll
+        env:
+          # Both optional. Without a key the poller reads the public page;
+          # PIPED_API is a fallback if this runner's address gets blocked.
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          PIPED_API: ${{ vars.PIPED_API }}
+        run: node scripts/poll.js
+
+      # When the no-key route stops working it is almost always the runner's
+      # address being treated as a bot. This says so plainly in the log
+      # instead of leaving a bare non-zero exit.
+      - name: Diagnose the failure
+        if: failure() && steps.poll.outcome == 'failure'
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          PIPED_API: ${{ vars.PIPED_API }}
+        run: node scripts/check-source.js
+
+      - name: Commit it
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/history.json
+          if git diff --quiet --cached; then
+            echo "No change to record."
+            exit 0
+          fi
+          git commit -m "Record view counts"
+          # The dashboard commits data/videos.json from the browser, so a push
+          # can race with one. Rebase onto whatever landed and try again.
+          for attempt in 1 2 3; do
+            if git push; then exit 0; fi
+            echo "Push rejected, rebasing (attempt $attempt)…"
+            git pull --rebase --autostash origin "${GITHUB_REF_NAME}" || exit 1
+            sleep 5
+          done
+          echo "Could not push after 3 attempts." >&2
+          exit 1

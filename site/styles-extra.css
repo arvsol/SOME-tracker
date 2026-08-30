@@ -1,0 +1,47 @@
+/* Only the pieces the static build adds on top of the shared stylesheet. */
+
+.brand { position: relative; }
+
+.connect-button {
+  margin-left: auto;
+  padding: 7px 15px;
+  font-size: 12.5px;
+  color: var(--text-dim);
+  background: var(--bg-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: 9px;
+  cursor: pointer;
+}
+.connect-button:hover { color: var(--text); }
+.connect-button.connected { color: var(--rising); border-color: rgba(52, 211, 153, .4); }
+
+.connect-panel {
+  margin: 0 0 16px;
+  padding: 16px 18px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  font-size: 13.5px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+.connect-panel a { color: var(--accent); }
+.panel-title { margin: 0 0 8px; font-size: 14px; font-weight: 600; color: var(--text); }
+.connect-panel p { margin: 0 0 10px; }
+.connect-panel ol { margin: 0 0 12px; padding-left: 20px; }
+.connect-panel b { color: var(--text); font-weight: 600; }
+
+.panel-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.token-input {
+  flex: 1;
+  min-width: 220px;
+  padding: 10px 14px;
+  font-size: 13.5px;
+  color: var(--text);
+  background: #0d1119;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  outline: none;
+}
+.token-input:focus { border-color: var(--accent); }
+.panel-row .paste-button { padding: 10px 20px; font-size: 13.5px; }

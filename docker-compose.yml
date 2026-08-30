@@ -1,0 +1,19 @@
+# Self-hosting on a VPS, home server or Raspberry Pi:
+#   docker compose up -d
+services:
+  tracker:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    volumes:
+      - tracker-data:/data
+    environment:
+      # Recommended. Without it, YouTube numbers come from page scraping.
+      YOUTUBE_API_KEY: "${YOUTUBE_API_KEY:-}"
+      # Set this if the port is reachable from the internet.
+      APP_PASSWORD: "${APP_PASSWORD:-}"
+      POLL_INTERVAL_MINUTES: "${POLL_INTERVAL_MINUTES:-15}"
+
+volumes:
+  tracker-data:
